@@ -5,3 +5,7 @@ class CheckRequest(BaseModel):
     api_key: str
     resource: str
     
+class CheckResponse(BaseModel):
+    allowed: bool
+    remaining: int
+    retry_after: float    
