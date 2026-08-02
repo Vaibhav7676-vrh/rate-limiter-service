@@ -1,15 +1,32 @@
 import time
 
 from app.api.schemas import CheckResponse
+from typing import Optional
 
 
 class TokenBucket:
 
-    def __init__(self, capacity: int, refill_rate: float):
+    def __init__(
+        self,
+        capacity: int,
+        refill_rate: float,
+        current_tokens: Optional[float] = None,
+        last_refill_time: Optional[float] = None,
+    ):
         self.capacity = capacity
         self.refill_rate = refill_rate
-        self.current_tokens = capacity
-        self.last_refill_time = time.time()
+
+        self.current_tokens = (
+            current_tokens
+            if current_tokens is not None
+            else capacity
+        )
+
+        self.last_refill_time = (
+            last_refill_time
+            if last_refill_time is not None
+            else time.time()
+        )
 
     def _refill(self):
         current_time = time.time()
