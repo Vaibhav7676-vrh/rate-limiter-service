@@ -1,45 +1,32 @@
+from pathlib import Path
+import time
+
 from app.storage.redis_client import redis_client
 
 
 class BucketRepository:
-    """
-    Repository responsible for storing and retrieving
-    Token Bucket state from Redis.
-    """
 
-    def get_bucket(self, bucket_key: str) -> dict:
-        """
-        Retrieve bucket data from Redis.
+    def __init__(self):
+        lua_path = Path(__file__).parent / "lua" / "token_bucket.lua"
 
-        Returns:
-            Dictionary containing bucket data.
-            Returns {} if the bucket doesn't exist.
-        """
-        return redis_client.hgetall(bucket_key)
+        with open(lua_path, "r") as file:
+            self.lua_script = file.read()
 
-    def save_bucket(self, bucket_key: str, bucket_data: dict) -> None:
-        """
-        Save bucket state to Redis.
+        # Load the Lua script once and cache its SHA1 hash
+        self.script_sha = redis_client.script_load(self.lua_script)
 
-        Example bucket_data:
-        {
-            "current_tokens": 4,
-            "last_refill_time": 1753862000.25
-        }
-        """
-        redis_client.hset(
+    def check_rate_limit(
+        self,
+        bucket_key: str,
+        capacity: int,
+        refill_rate: float,
+    ):
+
+        return redis_client.evalsha(
+            self.script_sha,
+            1,
             bucket_key,
-            mapping=bucket_data
+            capacity,
+            refill_rate,
+            time.time()
         )
-
-    def delete_bucket(self, bucket_key: str) -> None:
-        """
-        Delete a bucket from Redis.
-        """
-        redis_client.delete(bucket_key)
-
-    def bucket_exists(self, bucket_key: str) -> bool:
-        """
-        Check whether a bucket exists.
-        """
-        return redis_client.exists(bucket_key) == 1

@@ -1,5 +1,4 @@
-from app.algorithms.token_bucket import TokenBucket
-from app.api.schemas import CheckRequest
+from app.api.schemas import CheckRequest, CheckResponse
 from app.storage.bucket_repository import BucketRepository
 
 
@@ -16,32 +15,14 @@ class RateLimiterService:
             f"{request.resource}"
         )
 
-        bucket_data = self.bucket_repository.get_bucket(bucket_key)
-
-        if bucket_data:
-
-            bucket = TokenBucket(
-                capacity=5,
-                refill_rate=1,
-                current_tokens=float(bucket_data["current_tokens"]),
-                last_refill_time=float(bucket_data["last_refill_time"])
-            )
-
-        else:
-
-            bucket = TokenBucket(
-                capacity=5,
-                refill_rate=1
-            )
-
-        result = bucket.allow_request()
-
-        self.bucket_repository.save_bucket(
-            bucket_key,
-            {
-                "current_tokens": bucket.current_tokens,
-                "last_refill_time": bucket.last_refill_time
-            }
+        result = self.bucket_repository.check_rate_limit(
+            bucket_key=bucket_key,
+            capacity=5,
+            refill_rate=1
         )
 
-        return result
+        return CheckResponse(
+            allowed=bool(result[0]),
+            remaining=int(float(result[1])),
+            retry_after=round(float(result[2]), 2)
+        )
