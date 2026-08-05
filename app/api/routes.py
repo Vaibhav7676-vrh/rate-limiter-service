@@ -2,6 +2,13 @@ from fastapi import APIRouter
 from app.api.schemas import CheckRequest, CheckResponse
 from app.services.rate_limiter_service import RateLimiterService  
 from fastapi import APIRouter, HTTPException
+import time
+
+from app.monitoring.metrics import (
+    allowed_requests,
+    blocked_requests,
+    request_latency,
+)
 
 
 router = APIRouter()
@@ -15,19 +22,20 @@ def root():
     }
 
 
-@router.post("/check", response_model=CheckResponse)
+@router.post("/check")
 def check_limit(request: CheckRequest):
+
+    start_time = time.perf_counter()
 
     result = rate_limiter_service.check_limit(request)
 
-    if not result.allowed:
-        raise HTTPException(
-            status_code=429,
-            detail={
-                "allowed": False,
-                "remaining": result.remaining,
-                "retry_after": result.retry_after   
-            }
-        )
+    request_latency.observe(
+        time.perf_counter() - start_time
+    )
+
+    if result.allowed:
+        allowed_requests.inc()
+    else:
+        blocked_requests.inc()
 
     return result
