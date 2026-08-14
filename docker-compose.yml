@@ -1,12 +1,31 @@
 services:
+
   app:
     build: .
     ports:
       - "8000:8000"
     depends_on:
       - redis
+    environment:
+      - REDIS_HOST=redis
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
