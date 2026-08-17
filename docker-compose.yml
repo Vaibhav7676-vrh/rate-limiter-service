@@ -1,5 +1,4 @@
 services:
-
   app:
     build: .
     ports:
@@ -13,6 +12,8 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
 
   prometheus:
     image: prom/prometheus:latest
@@ -27,5 +28,11 @@ services:
     image: grafana/grafana:latest
     ports:
       - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
     depends_on:
       - prometheus
+
+volumes:
+  redis_data:
+  grafana_data:
